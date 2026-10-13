@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로또 6/45 스마트 정밀 분석기</title>
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-['Pretendard']">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white font-extrabold text-xl">
+          🍀
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            로또 6/45 스마트 정밀 분석기
+          </h1>
+          <p class="text-xs text-slate-400 flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            동행복권 실시간 데이터 기반 통계 & 백테스팅
+          </p>
+        </div>
+      </div>
+
+      <!-- 최신 회차 요약 뱃지 & 동기화 버튼 -->
+      <div class="flex items-center gap-3">
+        <div id="latestDrawBadge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+          <span class="text-amber-400 font-semibold" id="headerDrawNo">-회</span>
+          <span class="text-slate-500">|</span>
+          <div class="flex items-center gap-1" id="headerDrawBalls"></div>
+        </div>
+
+        <button id="btnSync" onclick="syncData()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/30 transition-all duration-200 active:scale-95">
+          <i class="fa-solid fa-arrows-rotate" id="syncIcon"></i>
+          <span>최신 데이터 동기화</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 border-t border-slate-800/60">
+      <nav class="flex gap-2 sm:gap-6 overflow-x-auto py-2.5 text-sm font-medium scrollbar-none">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active-tab flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid fa-chart-line text-emerald-400"></i> 통계 대시보드
+        </button>
+        <button onclick="switchTab('matches')" id="tab-matches" class="tab-btn text-slate-400 hover:text-slate-200 flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid fa-clone text-rose-400"></i> 동일 회차 매칭 (2~5개)
+        </button>
+        <button onclick="switchTab('generator')" id="tab-generator" class="tab-btn text-slate-400 hover:text-slate-200 flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> 스마트 번호 추천
+        </button>
+        <button onclick="switchTab('simulator')" id="tab-simulator" class="tab-btn text-slate-400 hover:text-slate-200 flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid fa-calculator text-blue-400"></i> 50개 백테스팅 시뮬레이터
+        </button>
+        <button onclick="switchTab('history')" id="tab-history" class="tab-btn text-slate-400 hover:text-slate-200 flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid fa-clock-rotate-left text-purple-400"></i> 역대 회차 조회
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: 대시보드 및 통계 분석 -->
+    <!-- ========================================== -->
+    <section id="view-dashboard" class="space-y-6">
+      
+      <!-- 최신 회차 하이라이트 배너 -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800/90 to-slate-800/40 border border-slate-700/80 p-6 shadow-xl backdrop-blur">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="flex items-center gap-3">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">최신 당첨 결과</span>
+              <span id="latestDate" class="text-xs text-slate-400">-</span>
+            </div>
+            <h2 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+              제 <span id="latestDrawNum" class="text-amber-400">-</span>회 당첨 번호
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300">
+              1등 1인당 당첨금: <span id="latestPrize" class="font-bold text-emerald-400 text-base sm:text-lg">-</span>원
+              <span class="text-slate-400">(총 <span id="latestWinners" class="text-white font-semibold">-</span>명 당첨 / 자동 <span id="latestAuto" class="text-white">-</span>명, 수동 <span id="latestManual" class="text-white">-</span>명)</span>
+            </p>
+          </div>
+
+          <!-- 당첨 번호 공 렌더링 영역 -->
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3 py-2">
+            <div id="latestBalls" class="flex flex-wrap items-center gap-2"></div>
+            <div class="text-slate-500 font-bold text-xl px-1">+</div>
+            <div id="latestBonusBall" class="flex items-center"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 종합 지표 요약 카드 그리드 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+          <p class="text-xs text-slate-400 flex items-center justify-between">
+            <span>총 누적 회차</span>
+            <i class="fa-solid fa-database text-slate-500"></i>
+          </p>
+          <p id="statTotalDraws" class="text-2xl font-bold text-white mt-1">-</p>
+          <p class="text-xs text-slate-400 mt-1">1회부터 누적 분석</p>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+          <p class="text-xs text-slate-400 flex items-center justify-between">
+            <span>역대 최다 출현 (Hot #1)</span>
+            <i class="fa-solid fa-fire text-amber-500"></i>
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <div id="statHotBall" class="lotto-ball-sm lotto-yellow font-bold">?</div>
+            <p id="statHotInfo" class="text-lg font-bold text-white">-</p>
+          </div>
+          <p id="statHotSub" class="text-xs text-slate-400 mt-1">-</p>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+          <p class="text-xs text-slate-400 flex items-center justify-between">
+            <span>최장 미출현 (Cold #1)</span>
+            <i class="fa-solid fa-snowflake text-cyan-400"></i>
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <div id="statColdBall" class="lotto-ball-sm lotto-blue font-bold">?</div>
+            <p id="statColdInfo" class="text-lg font-bold text-white">-</p>
+          </div>
+          <p id="statColdSub" class="text-xs text-slate-400 mt-1">-</p>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+          <p class="text-xs text-slate-400 flex items-center justify-between">
+            <span>골든 밸런스 총합 (100~175)</span>
+            <i class="fa-solid fa-scale-balanced text-emerald-400"></i>
+          </p>
+          <p id="statGoldenSumPct" class="text-2xl font-bold text-emerald-400 mt-1">-%</p>
+          <p class="text-xs text-slate-400 mt-1">역대 회차의 압도적 비중</p>
+        </div>
+      </div>
+
+      <!-- 메인 분석 차트 영역 -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- 1~45번 전체 빈도 막대 차트 (2 cols) -->
+        <div class="lg:col-span-2 bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-simple text-amber-400"></i> 번호별 출현 빈도 순위 (1~45번)
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">각 번호가 역대 당첨 번호(본 번호)로 출현한 횟수</p>
+            </div>
+            <!-- 기간 필터 -->
+            <div class="flex items-center gap-1 bg-slate-900/80 rounded-lg p-1 border border-slate-700/60 text-xs">
+              <button onclick="reloadStats('all')" id="filter-all" class="filter-btn active-filter px-2.5 py-1 rounded">전체</button>
+              <button onclick="reloadStats('100')" id="filter-100" class="filter-btn px-2.5 py-1 rounded text-slate-400 hover:text-white">최근 100회</button>
+              <button onclick="reloadStats('50')" id="filter-50" class="filter-btn px-2.5 py-1 rounded text-slate-400 hover:text-white">최근 50회</button>
+            </div>
+          </div>
+          <div class="h-72 w-full">
+            <canvas id="freqChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 홀짝 비율 & 번호대별 분포 도넛 차트 (1 col) -->
+        <div class="space-y-6">
+          <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+            <h3 class="font-bold text-base text-white flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-circle-half-stroke text-blue-400"></i> 홀수:짝수 출현 비율
+            </h3>
+            <p class="text-xs text-slate-400 mb-4">역대 당첨 번호 6개의 홀수/짝수 조합 비율</p>
+            <div class="h-48 w-full flex items-center justify-center">
+              <canvas id="oddEvenChart"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+            <h3 class="font-bold text-base text-white flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-palette text-emerald-400"></i> 구간대(색상)별 출현 비중
+            </h3>
+            <div id="sectionProgressBars" class="space-y-2.5 mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2차 통계: 장기 미출현 랭킹 & 총합 분포 & 연번/AC값 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- 장기 미출현 (Cold Numbers) 순위 -->
+        <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+              <i class="fa-solid fa-snowflake text-cyan-400"></i> 장기 미출현 번호 TOP 10
+            </h3>
+            <span class="text-xs text-slate-400">반등 기대수</span>
+          </div>
+          <div id="unappearedList" class="space-y-2"></div>
+        </div>
+
+        <!-- 총합(Sum) 분포 히스토그램 -->
+        <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+              <i class="fa-solid fa-wave-square text-emerald-400"></i> 당첨 번호 총합 분포
+            </h3>
+            <span class="text-xs text-emerald-400" id="avgSumLabel">평균 합: -</span>
+          </div>
+          <div class="h-60 w-full">
+            <canvas id="sumChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 연속 번호 & AC값 분석 -->
+        <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg space-y-5">
+          <div>
+            <h3 class="font-bold text-base text-white flex items-center gap-2 mb-3">
+              <i class="fa-solid fa-link text-purple-400"></i> 연속 번호(연번) 출현 빈도
+            </h3>
+            <div id="consecutiveList" class="space-y-2"></div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-700/60">
+            <h3 class="font-bold text-base text-white flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-brain text-amber-400"></i> 산술적 복잡도 (AC값)
+            </h3>
+            <p class="text-xs text-slate-400 mb-2">
+              AC 7~10점 출현율: <span id="highAcPct" class="text-emerald-400 font-bold">-%</span> (조합 난이도 지표)
+            </p>
+            <div class="h-28 w-full">
+              <canvas id="acChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 1.5: 동일 회차 매칭 분석 (2~5개 일치) -->
+    <!-- ========================================== -->
+    <section id="view-matches" class="hidden space-y-6">
+
+      <!-- 기준 회차 선택 헤더 카드 -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                <i class="fa-solid fa-clone"></i> 번호 중복 일치도 분석
+              </span>
+              <span class="text-xs text-slate-400">선택한 회차와 2개, 3개, 4개, 5개 번호가 같았던 과거 회차 전수 매칭</span>
+            </div>
+            <h2 class="text-2xl font-extrabold text-white flex items-center gap-3">
+              제 <span id="matchTargetDrawNo" class="text-amber-400">-</span>회 당첨 번호 기준 매칭
+            </h2>
+            <p class="text-xs text-slate-300">
+              추첨일: <span id="matchTargetDate" class="text-white font-medium">-</span> | 
+              1등 당첨금: <span id="matchTargetPrize" class="text-emerald-400 font-bold">-</span>원
+            </p>
+            <!-- 기준 회차 공 렌더링 -->
+            <div class="flex items-center gap-2 pt-1">
+              <div id="matchTargetBalls" class="flex items-center gap-2"></div>
+              <span class="text-slate-500 font-bold text-lg px-1">+</span>
+              <div id="matchTargetBonusBall"></div>
+            </div>
+          </div>
+
+          <!-- 회차 변경 컨트롤 -->
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/60 space-y-3 w-full lg:w-auto">
+            <span class="text-xs font-semibold text-slate-300 block">다른 회차로 변경하여 분석</span>
+            <div class="flex items-center gap-2">
+              <button onclick="changeMatchDrawStep(-1)" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700">◀ 이전회</button>
+              <input type="number" id="matchDrawInput" min="1" max="1500" placeholder="회차 입력" class="w-24 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-center text-sm font-bold text-white focus:outline-none focus:border-rose-400">
+              <button onclick="loadMatchesForInput()" class="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow">조회</button>
+              <button onclick="changeMatchDrawStep(1)" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700">다음회 ▶</button>
+            </div>
+            <button onclick="loadMatchesForLatest()" class="w-full py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs border border-slate-700/80">
+              최신 회차로 바로가기
+            </button>
+          </div>
+        </div>
+
+        <!-- 일치 개수 요약 뱃지 그리드 -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-700/60">
+          <div onclick="filterMatches(5)" id="btnFilter5" class="match-summary-card cursor-pointer p-3 rounded-xl bg-slate-900/60 border border-amber-500/40 hover:border-amber-400 transition text-center">
+            <div class="text-xs font-bold text-amber-400 flex items-center justify-center gap-1">
+              <span>⭐ 5개 동일 (3등급)</span>
+            </div>
+            <div id="matchSummary5" class="text-2xl font-black text-white mt-1">0건</div>
+            <span class="text-[10px] text-slate-400">대박 유사 회차</span>
+          </div>
+
+          <div onclick="filterMatches(4)" id="btnFilter4" class="match-summary-card cursor-pointer p-3 rounded-xl bg-slate-900/60 border border-emerald-500/40 hover:border-emerald-400 transition text-center">
+            <div class="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1">
+              <span>🟢 4개 동일 (4등급)</span>
+            </div>
+            <div id="matchSummary4" class="text-2xl font-black text-white mt-1">0건</div>
+            <span class="text-[10px] text-slate-400">중복 확률 희귀</span>
+          </div>
+
+          <div onclick="filterMatches(3)" id="btnFilter3" class="match-summary-card cursor-pointer p-3 rounded-xl bg-slate-900/60 border border-blue-500/40 hover:border-blue-400 transition text-center">
+            <div class="text-xs font-bold text-blue-400 flex items-center justify-center gap-1">
+              <span>🔵 3개 동일 (5등급)</span>
+            </div>
+            <div id="matchSummary3" class="text-2xl font-black text-white mt-1">0건</div>
+            <span class="text-[10px] text-slate-400">역대 고빈도 일치</span>
+          </div>
+
+          <div onclick="filterMatches(2)" id="btnFilter2" class="match-summary-card cursor-pointer p-3 rounded-xl bg-slate-900/60 border border-slate-700 hover:border-slate-500 transition text-center">
+            <div class="text-xs font-bold text-slate-400 flex items-center justify-center gap-1">
+              <span>⚪ 2개 동일</span>
+            </div>
+            <div id="matchSummary2" class="text-2xl font-black text-white mt-1">0건</div>
+            <span class="text-[10px] text-slate-400">부분 일치</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 일치 회차 목록 뷰 -->
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-rose-400"></i> 일치 회차 상세 목록
+            </h3>
+            <span id="currentMatchFilterBadge" class="px-2 py-0.5 rounded text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              전체 보기
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1.5 text-xs">
+            <button onclick="filterMatches('all')" id="mfBtn-all" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold">전체</button>
+            <button onclick="filterMatches(5)" id="mfBtn-5" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700">5개 일치</button>
+            <button onclick="filterMatches(4)" id="mfBtn-4" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700">4개 일치</button>
+            <button onclick="filterMatches(3)" id="mfBtn-3" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700">3개 일치</button>
+            <button onclick="filterMatches(2)" id="mfBtn-2" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700">2개 일치</button>
+          </div>
+        </div>
+
+        <!-- 카드 그리드 -->
+        <div id="matchedDrawsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
+      </div>
+
+      <!-- 역대 5개 동일 데칼코마니 회차 쌍 TOP 리스트 (특별 전시관) -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+              <i class="fa-solid fa-gem text-amber-400"></i> 역대 당첨 번호 5개 동일 데칼코마니 회차 쌍 (총 21쌍)
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              1회부터 최신 회차까지 6개 중 무려 5개 번호가 똑같이 출현했던 기적의 회차 쌍들입니다.
+            </p>
+          </div>
+          <button onclick="toggleAllPairsSection()" id="btnTogglePairs" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs text-slate-200">
+            펼치기 / 접기
+          </button>
+        </div>
+
+        <div id="allPairsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2"></div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: 스마트 번호 추천기 -->
+    <!-- ========================================== -->
+    <section id="view-generator" class="hidden space-y-6">
+
+      <!-- 전략 선택 및 옵션 패널 -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2 mb-4">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> 스마트 알고리즘 번호 추천
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          <!-- 1. 추천 전략 선택 -->
+          <div class="space-y-2">
+            <label class="block text-xs font-semibold text-slate-300">추천 알고리즘 전략</label>
+            <div class="space-y-2">
+              <label class="strategy-option active flex items-start gap-3 p-3 rounded-xl border border-slate-700 bg-slate-900/60 cursor-pointer transition">
+                <input type="radio" name="strategy" value="golden" checked class="mt-1">
+                <div>
+                  <div class="font-bold text-sm text-emerald-400">🏆 황금 통계 밸런스 (강력 추천)</div>
+                  <div class="text-xs text-slate-400">총합(100~175), 홀짝(2:4~4:2), AC≥7, 연번 2쌍 이하 등 역대 당첨 핵심 패턴 필터 적용</div>
+                </div>
+              </label>
+
+              <label class="strategy-option flex items-start gap-3 p-3 rounded-xl border border-slate-700 bg-slate-900/60 cursor-pointer transition">
+                <input type="radio" name="strategy" value="hot" class="mt-1">
+                <div>
+                  <div class="font-bold text-sm text-amber-400">🔥 최다 출현 가중치 (Hot Numbers)</div>
+                  <div class="text-xs text-slate-400">역대 가장 자주 당첨된 고빈도 번호들을 높은 확률 가중치로 조합</div>
+                </div>
+              </label>
+
+              <label class="strategy-option flex items-start gap-3 p-3 rounded-xl border border-slate-700 bg-slate-900/60 cursor-pointer transition">
+                <input type="radio" name="strategy" value="cold" class="mt-1">
+                <div>
+                  <div class="font-bold text-sm text-cyan-400">❄️ 장기 미출현 반등 (Cold Numbers)</div>
+                  <div class="text-xs text-slate-400">오랫동안 나오지 않아 통계적 회귀(반등) 가능성이 높은 번호 우선 조합</div>
+                </div>
+              </label>
+
+              <label class="strategy-option flex items-start gap-3 p-3 rounded-xl border border-slate-700 bg-slate-900/60 cursor-pointer transition">
+                <input type="radio" name="strategy" value="trend" class="mt-1">
+                <div>
+                  <div class="font-bold text-sm text-purple-400">📈 최근 10회 트렌드 하이브리드</div>
+                  <div class="text-xs text-slate-400">최근 흐름을 타고 있는 번호와 미출현 번호를 정밀 배분</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. 게임 수 및 번호판 고정/제외수 인터랙션 -->
+          <div class="md:col-span-2 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300">생성할 게임 수</label>
+                <div class="flex items-center gap-2 mt-1">
+                  <button type="button" onclick="setGameCount(1)" id="cntBtn-1" class="count-btn px-3 py-1 rounded-lg text-xs font-bold border border-slate-700 bg-slate-900">1게임</button>
+                  <button type="button" onclick="setGameCount(5)" id="cntBtn-5" class="count-btn active px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500 bg-emerald-600/30 text-emerald-300">5게임 (1세트)</button>
+                  <button type="button" onclick="setGameCount(10)" id="cntBtn-10" class="count-btn px-3 py-1 rounded-lg text-xs font-bold border border-slate-700 bg-slate-900">10게임</button>
+                </div>
+              </div>
+
+              <!-- 고정수 / 제외수 모드 선택 -->
+              <div class="flex items-center gap-2 text-xs">
+                <span class="text-slate-400">번호판 클릭 모드:</span>
+                <button type="button" onclick="setSelectMode('include')" id="modeBtnInclude" class="px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <i class="fa-solid fa-thumbtack"></i> 고정수 선택 (<span id="includeCount">0</span>/5)
+                </button>
+                <button type="button" onclick="setSelectMode('exclude')" id="modeBtnExclude" class="px-2.5 py-1 rounded-lg font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                  <i class="fa-solid fa-ban"></i> 제외수 선택 (<span id="excludeCount">0</span>)
+                </button>
+                <button type="button" onclick="clearBallSelections()" class="px-2 py-1 rounded-lg text-slate-400 hover:text-white border border-slate-700 text-xs">
+                  초기화
+                </button>
+              </div>
+            </div>
+
+            <!-- 1~45 인터랙티브 미니 번호판 -->
+            <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700/60">
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+                <span>클릭하여 고정수(황금 테두리) 또는 제외수(X표시)를 지정하세요.</span>
+                <span class="text-amber-400 font-medium">고정수 최대 5개</span>
+              </div>
+              <div id="interactiveBallGrid" class="grid grid-cols-9 sm:grid-cols-15 gap-1.5"></div>
+            </div>
+
+            <!-- 생성 버튼 -->
+            <button onclick="generateNumbers()" id="btnGenerate" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 hover:from-amber-400 hover:to-teal-400 text-slate-950 font-extrabold text-base shadow-lg shadow-emerald-500/20 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>스마트 번호 추천 생성하기</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 생성 결과 로또 용지(SLIP) 뷰 -->
+      <div id="generatedResultsArea" class="hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-ticket text-emerald-400"></i> 생성된 추천 번호 조합
+          </h3>
+          <div class="flex items-center gap-2">
+            <button onclick="sendGeneratedToSimulator()" class="px-3 py-1.5 rounded-lg bg-blue-600/30 text-blue-300 border border-blue-500/40 hover:bg-blue-600/40 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-paper-plane"></i> 50개 시뮬레이터로 보내기
+            </button>
+            <button onclick="copyGeneratedNumbers()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 flex items-center gap-1.5">
+              <i class="fa-regular fa-copy"></i> 텍스트 복사
+            </button>
+            <button onclick="generateNumbers()" class="px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 text-xs font-semibold flex items-center gap-1.5">
+              <i class="fa-solid fa-arrows-rotate"></i> 다시 뽑기
+            </button>
+          </div>
+        </div>
+
+        <div id="ticketCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: 50개 번호조합 백테스팅 시뮬레이터 -->
+    <!-- ========================================== -->
+    <section id="view-simulator" class="hidden space-y-6">
+
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-calculator text-blue-400"></i> 역대 가상 투자 시뮬레이터 (최대 50개 조합 일괄 백테스팅)
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1">
+              최대 50개의 번호 조합을 등록하여 1회부터 최신 회차까지 매주 구매했을 때의 통합 수익률 및 조합별 성적을 분석합니다.
+            </p>
+          </div>
+
+          <!-- 등록 현황 뱃지 -->
+          <div class="flex items-center gap-2 bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-700 text-xs">
+            <span class="text-slate-400">현재 등록된 조합:</span>
+            <span id="comboCountBadge" class="font-extrabold text-blue-400 text-base">0</span>
+            <span class="text-slate-500 font-semibold">/ 50개</span>
+          </div>
+        </div>
+
+        <!-- 조합 입력 컨트롤 (탭: 일괄 붙여넣기 vs 직접 입력) -->
+        <div class="space-y-4">
+          <!-- 퀵 액션 프리셋 버튼 바 -->
+          <div class="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-700/60 text-xs">
+            <span class="text-slate-400 font-medium mr-1">빠른 채우기:</span>
+            <button onclick="addRandomCombos(5)" class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition">
+              + 랜덤 5개
+            </button>
+            <button onclick="addRandomCombos(10)" class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition">
+              + 랜덤 10개
+            </button>
+            <button onclick="fillRandom50Combos()" class="px-2.5 py-1.5 rounded-lg bg-blue-600/30 text-blue-300 border border-blue-500/40 hover:bg-blue-600/40 font-bold transition">
+              + 랜덤 50개 꽉 채우기
+            </button>
+            <button onclick="loadGeneratedCombosToSim()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/40 font-bold transition">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> 추천 번호 가져오기
+            </button>
+            <div class="flex-1"></div>
+            <button onclick="clearAllCombos()" class="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 transition">
+              <i class="fa-solid fa-trash-can"></i> 전체 비우기
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- 1. 텍스트 일괄 붙여넣기 -->
+            <div class="bg-slate-900/70 p-4 rounded-xl border border-slate-700/60 space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-200">
+                  <i class="fa-solid fa-paste text-blue-400 mr-1"></i> 텍스트 일괄 붙여넣기 (여러 줄 복사)
+                </span>
+                <span class="text-[11px] text-slate-400">쉼표, 공백, 줄바꿈 자동 인식</span>
+              </div>
+              <textarea id="simPasteArea" rows="4" placeholder="예시:&#10;3, 12, 19, 24, 33, 41&#10;5 8 16 27 34 45&#10;7, 14, 21, 28, 35, 42" class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white font-mono focus:outline-none focus:border-blue-400 resize-none"></textarea>
+              <button onclick="parseAndAddCombos()" class="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition">
+                붙여넣은 번호 파싱하여 등록
+              </button>
+            </div>
+
+            <!-- 2. 단일 조합 직접 입력 -->
+            <div class="bg-slate-900/70 p-4 rounded-xl border border-slate-700/60 space-y-2.5 flex flex-col justify-between">
+              <div>
+                <span class="font-bold text-slate-200 text-xs block mb-2">
+                  <i class="fa-solid fa-keyboard text-emerald-400 mr-1"></i> 6개 번호 직접 입력하여 1개씩 추가
+                </span>
+                <div class="flex items-center justify-center gap-1.5 py-1">
+                  <input type="number" id="manualNum1" min="1" max="45" placeholder="1" class="manual-input w-10 h-10 text-center text-sm font-bold rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-blue-400 focus:outline-none">
+                  <input type="number" id="manualNum2" min="1" max="45" placeholder="2" class="manual-input w-10 h-10 text-center text-sm font-bold rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-blue-400 focus:outline-none">
+                  <input type="number" id="manualNum3" min="1" max="45" placeholder="3" class="manual-input w-10 h-10 text-center text-sm font-bold rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-blue-400 focus:outline-none">
+                  <input type="number" id="manualNum4" min="1" max="45" placeholder="4" class="manual-input w-10 h-10 text-center text-sm font-bold rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-blue-400 focus:outline-none">
+                  <input type="number" id="manualNum5" min="1" max="45" placeholder="5" class="manual-input w-10 h-10 text-center text-sm font-bold rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-blue-400 focus:outline-none">
+                  <input type="number" id="manualNum6" min="1" max="45" placeholder="6" class="manual-input w-10 h-10 text-center text-sm font-bold rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-blue-400 focus:outline-none">
+                </div>
+              </div>
+              <button onclick="addManualCombo()" class="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs transition">
+                + 이 조합 목록에 추가
+              </button>
+            </div>
+          </div>
+
+          <!-- 등록된 조합 칩 리스트 컨테이너 -->
+          <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between text-xs mb-2.5">
+              <span class="text-slate-300 font-semibold">
+                등록된 조합 목록 (<span id="comboChipsCount">0</span>개)
+              </span>
+              <span class="text-slate-500 text-[11px]">각 조합의 [✕]를 눌러 개별 삭제할 수 있습니다.</span>
+            </div>
+            <div id="comboChipsGrid" class="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
+              <span class="text-xs text-slate-500 py-3 block w-full text-center">등록된 번호 조합이 없습니다. 위의 버튼을 눌러 번호를 등록해주세요.</span>
+            </div>
+          </div>
+
+          <!-- 시뮬레이션 실행 대형 버튼 -->
+          <button onclick="runMultiSimulation()" id="btnRunMultiSim" class="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-extrabold text-base shadow-xl shadow-blue-600/20 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2">
+            <i class="fa-solid fa-play"></i>
+            <span id="simBtnLabel">등록된 0개 조합 백테스팅 실행하기</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 백테스팅 결과 대시보드 (50개 통합) -->
+      <div id="multiSimResultArea" class="hidden space-y-6">
+
+        <!-- 4대 종합 요약 카드 그리드 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-4">
+            <span class="text-xs text-slate-400">총 투자 비용</span>
+            <p id="msTotalSpent" class="text-2xl font-bold text-white mt-1">-원</p>
+            <p id="msGamesCountLabel" class="text-xs text-slate-400 mt-0.5">총 -게임 가상 응모</p>
+          </div>
+
+          <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-4">
+            <span class="text-xs text-slate-400">총 획득 당첨금 합계</span>
+            <p id="msTotalPrize" class="text-2xl font-bold text-emerald-400 mt-1">-원</p>
+            <p id="msWinCountLabel" class="text-xs text-slate-400 mt-0.5">총 -회 당첨 발생</p>
+          </div>
+
+          <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-4">
+            <span class="text-xs text-slate-400">통합 순손익 (Net Profit)</span>
+            <p id="msNetProfit" class="text-2xl font-bold mt-1">-원</p>
+            <p id="msNetProfitSub" class="text-xs text-slate-400 mt-0.5">-</p>
+          </div>
+
+          <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-4">
+            <span class="text-xs text-slate-400">통합 투자 수익률 (ROI)</span>
+            <p id="msRoi" class="text-2xl font-bold mt-1">-%</p>
+            <p id="msHighestRank" class="text-xs text-amber-400 font-semibold mt-0.5">최고 성적: -</p>
+          </div>
+        </div>
+
+        <!-- 통합 등수별 당첨 횟수 그리드 -->
+        <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+          <h3 class="font-bold text-base text-white mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-amber-400"></i> 전체 조합 통합 등수별 당첨 실적
+          </h3>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center" id="msRankGrid"></div>
+        </div>
+
+        <!-- 조합별 성적 랭킹 테이블 (1위 ~ 50위) -->
+        <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+              <i class="fa-solid fa-ranking-star text-emerald-400"></i> 각 조합별 성적 랭킹 (수익금 순위)
+            </h3>
+            <span class="text-xs text-slate-400">총 <span id="msComboTableCount">0</span>개 조합 성적표</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                <tr>
+                  <th class="py-3 px-3">순위</th>
+                  <th class="py-3 px-3">조합</th>
+                  <th class="py-3 px-3">선택 번호 (6개)</th>
+                  <th class="py-3 px-3 text-center">최고등수</th>
+                  <th class="py-3 px-3 text-center">1등 / 2등 / 3등</th>
+                  <th class="py-3 px-3 text-center">4등 / 5등</th>
+                  <th class="py-3 px-3 text-right">획득 당첨금</th>
+                  <th class="py-3 px-3 text-right">수익률 (ROI)</th>
+                </tr>
+              </thead>
+              <tbody id="msCombosTableBody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 고액 당첨(1~3등) 히스토리 리스트 -->
+        <div class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5 shadow-lg">
+          <h3 class="font-bold text-base text-white mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-star text-amber-400"></i> 고액 당첨 (1등·2등·3등) 히스토리
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                <tr>
+                  <th class="py-2.5 px-3">회차</th>
+                  <th class="py-2.5 px-3">추첨일자</th>
+                  <th class="py-2.5 px-3">당첨 조합</th>
+                  <th class="py-2.5 px-3">등수</th>
+                  <th class="py-2.5 px-3">일치 번호</th>
+                  <th class="py-2.5 px-3 text-right">당시 당첨금</th>
+                </tr>
+              </thead>
+              <tbody id="msHighWinsTableBody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: 역대 회차 조회 -->
+    <!-- ========================================== -->
+    <section id="view-history" class="hidden space-y-6">
+
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-purple-400"></i> 역대 로또 당첨 결과 조회
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">1회부터 최신 회차까지 모든 당첨 번호와 1등 당첨 정보</p>
+          </div>
+
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="text" id="historySearchInput" placeholder="회차 또는 번호 검색 (예: 1100)" class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-400 w-full sm:w-64">
+            <button onclick="searchHistory()" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold whitespace-nowrap">
+              검색
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-3">회차</th>
+                <th class="py-3 px-3">추첨일자</th>
+                <th class="py-3 px-3">당첨번호 (6개 + 보너스)</th>
+                <th class="py-3 px-3">1등 인원</th>
+                <th class="py-3 px-3 text-right">1등 1인당 당첨금</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between mt-4 text-xs text-slate-400">
+          <span id="historyPageInfo">1 / 1 페이지</span>
+          <div class="flex items-center gap-2">
+            <button onclick="prevHistoryPage()" id="btnPrevPage" class="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-40">이전</button>
+            <button onclick="nextHistoryPage()" id="btnNextPage" class="px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-40">다음</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-4 text-center text-xs text-slate-500">
+    <p>🍀 로또 6/45 스마트 분석기 &copy; 2026. 복권은 소액으로 건전하게 즐기세요.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

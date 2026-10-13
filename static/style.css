@@ -1,0 +1,260 @@
+/* ===================================================
+   로또 6/45 스마트 정밀 분석기 - 커스텀 스타일시트
+   =================================================== */
+
+/* 기본 폰트 및 스무스 스크롤 */
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 탭 버튼 스타일 */
+.tab-btn {
+  transition: all 0.2s ease-in-out;
+}
+.tab-btn.active-tab {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  font-weight: 700;
+}
+
+/* 기간 필터 버튼 */
+.filter-btn {
+  transition: all 0.15s ease;
+}
+.filter-btn.active-filter {
+  background-color: #059669;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* ===================================================
+   로또 공 (Lotto Ball) 3D 입체 디자인
+   동행복권 공식 색상 체계:
+   1~10:  노랑 (#fbc400)
+   11~20: 파랑 (#69c8f2)
+   21~30: 빨강 (#ff7272)
+   31~40: 회색 (#aaaaaa)
+   41~45: 초록 (#b0d840)
+   =================================================== */
+.lotto-ball,
+.lotto-ball-sm,
+.lotto-ball-mini,
+.lotto-ball-grid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 800;
+  color: #ffffff;
+  user-select: none;
+  position: relative;
+  box-shadow: inset -2px -3px 5px rgba(0, 0, 0, 0.35), 0 3px 6px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* 기본 공 (중형 - 최신 당첨 결과용) */
+.lotto-ball {
+  width: 44px;
+  height: 44px;
+  font-size: 1.15rem;
+}
+
+/* 소형 공 (카드/리스트용) */
+.lotto-ball-sm {
+  width: 34px;
+  height: 34px;
+  font-size: 0.95rem;
+}
+
+/* 미니 공 (헤더/배지용) */
+.lotto-ball-mini {
+  width: 24px;
+  height: 24px;
+  font-size: 0.75rem;
+}
+
+/* 인터랙티브 번호판용 공 */
+.lotto-ball-grid {
+  width: 36px;
+  height: 36px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+.lotto-ball-grid:hover {
+  transform: translateY(-2px) scale(1.08);
+}
+
+/* 공 색상별 그라디언트 (빛 반사 하이라이트 효과) */
+.lotto-yellow {
+  background: radial-gradient(circle at 35% 35%, #fff176, #fbc400 60%, #c49000);
+  color: #3e2723;
+  text-shadow: none;
+}
+.lotto-blue {
+  background: radial-gradient(circle at 35% 35%, #80d8ff, #0288d1 60%, #01579b);
+}
+.lotto-red {
+  background: radial-gradient(circle at 35% 35%, #ff8a80, #e53935 60%, #b71c1c);
+}
+.lotto-gray {
+  background: radial-gradient(circle at 35% 35%, #e0e0e0, #8e8e8e 60%, #424242);
+}
+.lotto-green {
+  background: radial-gradient(circle at 35% 35%, #ccff90, #7cb342 60%, #33691e);
+  color: #1b5e20;
+  text-shadow: none;
+}
+
+/* 번호판 선택 상태 표시 */
+/* 고정수 (Include) 상태: 금빛 펄스 링 */
+.ball-included {
+  transform: scale(1.1) !important;
+  box-shadow: 0 0 0 3px #fbbf24, 0 0 14px rgba(251, 191, 36, 0.8) !important;
+  z-index: 2;
+}
+.ball-included::after {
+  content: "★";
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  font-size: 11px;
+  color: #fbbf24;
+  text-shadow: 0 0 4px #000;
+}
+
+/* 제외수 (Exclude) 상태: 딤드 및 사선 X */
+.ball-excluded {
+  opacity: 0.3 !important;
+  filter: grayscale(80%) !important;
+  transform: scale(0.9) !important;
+  position: relative;
+}
+.ball-excluded::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background-color: #ef4444;
+  transform: rotate(45deg);
+}
+
+/* ===================================================
+   로또 복권 티켓(SLIP) 카드 스타일
+   =================================================== */
+.ticket-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.ticket-card:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -4px rgba(16, 185, 129, 0.15);
+}
+.ticket-game-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.6rem;
+  background: rgba(15, 23, 42, 0.6);
+  margin-bottom: 0.4rem;
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ===================================================
+   동일 번호 매칭 하이라이트 & 딤드 공 스타일
+   =================================================== */
+.ball-matched {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 2.5px #fbbf24, 0 0 10px rgba(251, 191, 36, 0.6) !important;
+  z-index: 2;
+  position: relative;
+}
+.ball-matched::after {
+  content: "✓";
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  font-size: 10px;
+  background-color: #fbbf24;
+  color: #1e1e1e;
+  border-radius: 9999px;
+  width: 13px;
+  height: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.ball-unmatched {
+  opacity: 0.25 !important;
+  filter: grayscale(80%) !important;
+  transform: scale(0.92);
+}
+
+/* 50개 조합 칩 태그 스타일 */
+.combo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background-color: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  border-radius: 0.6rem;
+  font-size: 0.75rem;
+  color: #f1f5f9;
+  transition: all 0.15s ease;
+}
+.combo-chip:hover {
+  border-color: #60a5fa;
+  background-color: rgba(30, 41, 59, 1);
+}
+.combo-chip-remove {
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 4px;
+}
+.combo-chip-remove:hover {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+.match-summary-card {
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.match-summary-card:hover {
+  transform: translateY(-2px);
+  background-color: rgba(15, 23, 42, 0.9);
+}
+.match-summary-card.active-filter-card {
+  box-shadow: 0 0 0 2px #f43f5e;
+  background-color: rgba(244, 63, 94, 0.1);
+}
+
